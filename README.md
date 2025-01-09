@@ -1,113 +1,152 @@
-# IOT_Patient_Monitoring_Pipeline
+# IoT Patient Monitoring Pipeline
 
-This is a ....
+A real-time patient monitoring system built with Apache Kafka, MongoDB, and Apache Spark Streaming. The system processes IoT medical device data, identifies emergency situations, and stores both normal and emergency readings for analysis.
 
-## Environment structure
+## Architecture Overview
+
+The pipeline consists of several components:
+- **Kafka**: Message broker for data ingestion and streaming
+- **MongoDB**: Data storage for normal and emergency readings
+- **Spark Streaming**: Real-time data processing and analytics
+- **Kafka Connect**: Integration between Kafka and MongoDB
+- **Control Center**: Kafka monitoring and management interface
+
+## Project Structure
+```
 /
-├── spark-streaming/streaming.py
-├── alert.py
-├── createKafkaTopic.py
-├── docker-compose.yml
-├── Dockerfile
-├── gateway.py
-├── iot_patient_data.csv
-├── mongo.py
-├── README.md
-├── requirements.txt
-├── sink_fire.json
-└── sink_normal.json
+├── spark-streaming/
+│   └── streaming.py          # Spark streaming analytics
+├── alert.py                  # Emergency alerts consumer
+├── createKafkaTopic.py      # Kafka topic creation script
+├── docker-compose.yml        # Docker services configuration
+├── Dockerfile               # Kafka Connect with MongoDB connector
+├── gateway.py               # Data producer/simulator
+├── iot_patient_data.csv     # Sample dataset
+├── mongo.py                 # MongoDB data viewer
+├── requirements.txt         # Python dependencies
+├── sink_emergency.json      # MongoDB connector config for emergencies
+└── sink_normal.json         # MongoDB connector config for normal readings
+```
 
 ## Dataset Description
 
-The dataset contains IoT medical monitoring data with fields:
+The dataset contains IoT medical monitoring data with the following fields:
+- **Timestamp**: Reading time
+- **PatientID** (P1-P10): Unique patient identifier
+- **DeviceID** (D1-D5): Monitoring device identifier
+- **Metric**: Vital sign being measured (Temperature, HeartRate, OxygenLevel)
+- **Value**: Numerical measurement
+- **Unit**: Measurement unit (°C, bpm, %)
 
-    Timestamp: Reading time
-    PatientID (P1-P10): Unique patient identifier
-    DeviceID (D1-D5): Monitoring device identifier
-    Metric: Vital sign being measured (Temperature, HeartRate, OxygenLevel)
-    Value: Numerical measurement
-    Unit: Measurement unit (°C, bpm, %)
+## Emergency Thresholds
 
+The system monitors for the following emergency conditions:
+- Temperature > 39°C
+- Heart Rate > 120 bpm
+- Oxygen Level < 90%
 
-## Kafka Topics:
+## System Requirements
 
-"emergency": Receives data when measurements exceed thresholds:
+- Python 3.11
+- Docker and Docker Compose
+- 8GB RAM (minimum)
+- 20GB free disk space
 
-    Temperature > 39°C
-    Heart Rate > 120 bpm
-    Oxygen Level < 90%
+## Installation and Setup
 
-
-"normal": Receives all other measurements within normal ranges
-
-
-## Requirements
-
-1- Python 3.11
-
-2- Docker
-
-3- Create a new environment using the following command:
-
+1. Create a Python virtual environment:
 ```bash
-$ python -m venv venv
+python -m venv venv
 ```
 
-3- Activate the environment:
-
+2. Activate the virtual environment:
 ```bash
-$ .\venv\Scripts\activate
+# Windows
+.\venv\Scripts\activate
+
+# Linux/MacOS
+source venv/bin/activate
 ```
 
-## Installation
-
-### Install the required packages
-
+3. Install Python dependencies:
 ```bash
-$ pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-## Create docker containers
+4. Start the Docker containers:
 ```bash
-$ docker-compose up -d --build
+docker-compose up -d --build
 ```
 
-## Create kafka topics
-
+5. Create Kafka topics:
 ```bash
-$ python createKafkaTopic.py
+python createKafkaTopic.py
 ```
 
-## Run the kafka producer
+## Running the Pipeline
 
+1. Start the data producer:
 ```bash
-$ python gateway.py
+python gateway.py
 ```
 
-## Run the alert program notifying about an abnormal data
-
+2. Start the alert monitoring system:
 ```bash
-$ python alert.py
+python alert.py
 ```
 
-## Connect mongo to kafka
-
+3. Configure MongoDB connectors:
 ```bash
-$ Invoke-RestMethod -Uri "http://localhost:8083/connectors" -Method POST -ContentType "application/json" -Body (Get-Content -Raw sink_emergency.json)
+# Windows
+Invoke-RestMethod -Uri "http://localhost:8083/connectors" -Method POST -ContentType "application/json" -Body (Get-Content -Raw sink_emergency.json)
+Invoke-RestMethod -Uri "http://localhost:8083/connectors" -Method POST -ContentType "application/json" -Body (Get-Content -Raw sink_normal.json)
+
+# Linux/MacOS
+curl -X POST -H "Content-Type: application/json" --data @sink_emergency.json http://localhost:8083/connectors
+curl -X POST -H "Content-Type: application/json" --data @sink_normal.json http://localhost:8083/connectors
 ```
 
+4. Start Spark streaming analytics:
 ```bash
-$ Invoke-RestMethod -Uri "http://localhost:8083/connectors" -Method POST -ContentType "application/json" -Body (Get-Content -Raw sink_normal.json)
+docker exec -it Spark-submit /opt/bitnami/spark/bin/spark-submit \
+    --master spark://spark-master:7077 \
+    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 \
+    /app/streaming.py
 ```
 
-## Show data stored in mongodb
+## Accessing Components
 
+- **Kafka Control Center**: http://localhost:9021
+- **Spark Master UI**: http://localhost:8080
+- **MongoDB**: localhost:27017
+- **Kafka Connect REST API**: http://localhost:8083
+
+## Monitoring and Management
+
+1. View data in MongoDB:
 ```bash
-$ python mongo.py
+python mongo.py
 ```
 
-## Start the spark streaming processing script
+2. Monitor Kafka topics and connectors through Control Center:
+   - Navigate to http://localhost:9021
+   - Check topic health, throughput, and consumer groups
 
-```bash
-$ docker exec -it Spark-submit /opt/bitnami/spark/bin/spark-submit --master spark://spark-master:7077 --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /app/streaming.py
-```
+3. Monitor Spark processing:
+   - Access Spark UI at http://localhost:8080
+   - View streaming queries and performance metrics
+
+## Technologies Used
+
+- Apache Kafka 5.3.0
+- Apache Spark (latest)
+- MongoDB 4.2.2
+- Python 3.11
+- Confluent Platform 5.3.0
+- Docker & Docker Compose
+
+## Notes
+
+- The system uses a single-node setup suitable for development and testing
+- For production, consider increasing replication factors and adjusting security settings
+- All passwords in configuration files should be changed before deploying to production
