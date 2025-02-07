@@ -11,6 +11,8 @@ The pipeline consists of several components:
 - **Kafka Connect**: Integration between Kafka and MongoDB
 - **Control Center**: Kafka monitoring and management interface
 
+![IoT Patient Monitoring Pipeline](Pipeline_Architecture.png)
+
 ## Project Structure
 ```
 /
